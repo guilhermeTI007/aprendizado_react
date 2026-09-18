@@ -29,9 +29,17 @@ function Empresas() {
     // campos do formulário de funcionário
     const [novofuncionario, setnovofuncionario] = useState({ nome: "", id_empresas: "", cargo: "", contato: "" })
 
+    // status de conexão com a internet
+    const [conectado, setconectado] = useState(navigator.onLine)
+
     async function busca_todas_empresas() {
         const {error, data} = await supabase.from("empresas").select()
         console.log(data);
+        if (error) {
+            console.log(error);
+            alert("Erro ao buscar empresas: " + error.message)
+            return
+        }
         setempresas(data || [])
     }
 
@@ -39,6 +47,11 @@ function Empresas() {
         const {error, data} = await supabase.from("funcionarios").select("*, empresas(nome, endereco)") 
         /*.select("*, empresas")*/
         console.log(data);
+        if (error) {
+            console.log(error);
+            alert("Erro ao buscar funcionários: " + error.message)
+            return
+        }
         setfuncionarios(data || [])
     }
 
@@ -50,6 +63,7 @@ function Empresas() {
 
         if (error) {
             console.log(error);
+            alert("Erro ao buscar funcionários da empresa: " + error.message)
             setfuncionariosdaempresa([])
             return
         }
@@ -74,8 +88,29 @@ function Empresas() {
         setnovofuncionario({ nome: "", id_empresas: "", cargo: "", contato: "" })
     }
 
+    function abrirmodalempresa(){
+        if (!conectado) {
+            alert("Você está sem conexão com a internet. Não é possível cadastrar empresas agora.")
+            return
+        }
+        setmodalempresa(true)
+    }
+
+    function abrirmodalfuncionario(){
+        if (!conectado) {
+            alert("Você está sem conexão com a internet. Não é possível cadastrar funcionários agora.")
+            return
+        }
+        setmodalfuncionario(true)
+    }
+
     async function cadastrarempresa(e){
         e.preventDefault()
+
+        if (!conectado) {
+            alert("Sem conexão com a internet. Verifique sua rede e tente novamente.")
+            return
+        }
 
         if (!novaempresa.nome || !novaempresa.cnpj) {
             alert("Preencha nome e CNPJ antes de salvar.")
@@ -94,6 +129,11 @@ function Empresas() {
 
     async function cadastrarfuncionario(e){
         e.preventDefault()
+
+        if (!conectado) {
+            alert("Sem conexão com a internet. Verifique sua rede e tente novamente.")
+            return
+        }
 
         if (!novofuncionario.nome || !novofuncionario.id_empresas || !novofuncionario.cargo) {
             alert("Preencha nome, empresa e cargo antes de salvar.")
@@ -122,14 +162,42 @@ function Empresas() {
         busca_funcionarios()
     }, [] )
 
+    // monitora a conexão com a internet
+    useEffect(() => {
+        function aoficarconectado(){
+            setconectado(true)
+        }
+        function aoficaroffline(){
+            setconectado(false)
+            alert("Você perdeu a conexão com a internet.")
+        }
+
+        window.addEventListener("online", aoficarconectado)
+        window.addEventListener("offline", aoficaroffline)
+
+        return () => {
+            window.removeEventListener("online", aoficarconectado)
+            window.removeEventListener("offline", aoficaroffline)
+        }
+    }, [])
+
     return (  
         <div className="container">
             <h1>Relaxionamento de Tabelas</h1>
             <p>Consulta na tabela de fnucionario</p>
 
+            {
+                !conectado ?
+                <div className="aviso-offline">
+                    Sem conexão com a internet. Algumas ações podem não funcionar.
+                </div>
+                :
+                <></>
+            }
+
             <div className="botoes-topo">
-                <button onClick={() => setmodalfuncionario(true)}>Cadastrar Funcionário</button>
-                <button onClick={() => setmodalempresa(true)}>Cadastrar Empresa</button>
+                <button onClick={abrirmodalfuncionario}>Cadastrar Funcionário</button>
+                <button onClick={abrirmodalempresa}>Cadastrar Empresa</button>
                 <button onClick={alteravisualizacao}>Alternar Empresas / Funcionários</button>
             </div>
 
